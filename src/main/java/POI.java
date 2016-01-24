@@ -12,13 +12,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class POI {
-    private Map<Integer, Cell> data;
+    private Map<Integer, Map<String, Cell>> data;
     private int totalRows;
     private int totalCells;
     private FileInputStream excel;
@@ -72,11 +69,11 @@ public class POI {
         this.totalCells = totalCells;
     }
 
-    public Map<Integer, Cell> getData() {
+    public Map<Integer, Map<String, Cell>> getData() {
         return data;
     }
 
-    public void setData(Map<Integer, Cell> data) {
+    public void setData(Map<Integer, Map<String, Cell>> data) {
         this.data = data;
     }
 
@@ -97,9 +94,11 @@ public class POI {
         List<Cell> dataValue = new ArrayList<>();
         //
         Cell cell;
+        int contactId;
 
-        for (int rowNumber = 1; rowNumber <= getTotalRows() ; rowNumber++) {
+        for (int rowNumber = 1; rowNumber < getTotalRows() ; rowNumber++) {
             Row row = getSheet().getRow(rowNumber);
+            contactId = (int) row.getCell(2).getNumericCellValue();
             if (row == null) {
                 continue;
             } else {
@@ -124,27 +123,45 @@ public class POI {
                             break;
                     }
                     if (cellNumber == 0 || cellNumber == 1 || cellNumber == 11 || cellNumber == 13 || cellNumber == 15) {
-                        contact.put(rowNumber, contactValue);
-
-                    } else {
+                        contact.put(contactId, contactValue);
+                    }
+                    else if(cellNumber == 2 || cellNumber == 6) {
+                        continue;
+                    }
+                    else {
                         dataValue.add(cell);
-                        data.put(rowNumber, dataValue);
+                        data.put(contactId, dataValue);
                     }
                 }
             }
             dataValue = new ArrayList<>();
             contactValue = new HashMap<>();
         }
+        setData(contact);
         getWorkbook().close();
         getExcel().close();
 
-        for (Map.Entry cont : data.entrySet()) {
-            System.out.println(cont.getKey() + ", " + cont.getValue());
+        for (Map.Entry<Integer, Map<String, Cell>> eachRow : getData().entrySet()) {
+            System.out.println(eachRow.getKey());
+            if (eachRow.getValue() instanceof Map) {
+                Iterator iterator = eachRow.getValue().entrySet().iterator();
+                while (iterator.hasNext()) {
+                    Map.Entry eachCell = (Map.Entry) iterator.next();
+                    System.out.println(eachCell.getValue());
+                }
+            }
         }
     }
 
-    public void createExcel(String fileName) throws IOException {
+    public void createExcel(String fileName, String sheetName) throws IOException {
         Workbook wb = new XSSFWorkbook();
+        Sheet sheet = wb.createSheet(sheetName);
+        for (int i = 1; i < getTotalRows() ; i++) {
+            Row row = sheet.createRow(i);
+            for (Map.Entry<Integer, Map<String, Cell>> eachRow : getData().entrySet()) {
+                System.out.println(eachRow);
+            }
+        }
         FileOutputStream excelOut = new FileOutputStream(fileName);
         wb.write(excelOut);
         excelOut.close();
