@@ -16,6 +16,7 @@ import java.util.*;
 
 public class POI {
     private Map<Integer, Map<String, Cell>> data;
+    private Map<Integer, List<Cell>> contactData;
     private int totalRows;
     private int totalCells;
     private FileInputStream excel;
@@ -77,6 +78,14 @@ public class POI {
         this.data = data;
     }
 
+    public Map<Integer, List<Cell>> getContactData() {
+        return contactData;
+    }
+
+    public void setContactData(Map<Integer, List<Cell>> contactData) {
+        this.contactData = contactData;
+    }
+
     public POI(String uri) throws IOException {
         setExcel(this.excel, uri);
         setWorkbook(uri);
@@ -125,7 +134,7 @@ public class POI {
                     if (cellNumber == 0 || cellNumber == 1 || cellNumber == 11 || cellNumber == 13 || cellNumber == 15) {
                         contact.put(contactId, contactValue);
                     }
-                    else if(cellNumber == 2 || cellNumber == 6) {
+                    else if(cellNumber == 2 || cellNumber == 6 || cellNumber == 10) {
                         continue;
                     }
                     else {
@@ -138,30 +147,54 @@ public class POI {
             contactValue = new HashMap<>();
         }
         setData(contact);
+        setContactData(data);
         getWorkbook().close();
         getExcel().close();
+    }
 
+    public void createExcelContact(String fileName, String sheetName) throws IOException {
+        Workbook wb = new XSSFWorkbook();
+        Sheet sheet = wb.createSheet(sheetName);
+        int rowIndex = 0;
         for (Map.Entry<Integer, Map<String, Cell>> eachRow : getData().entrySet()) {
-            System.out.println(eachRow.getKey());
             if (eachRow.getValue() instanceof Map) {
                 Iterator iterator = eachRow.getValue().entrySet().iterator();
                 while (iterator.hasNext()) {
                     Map.Entry eachCell = (Map.Entry) iterator.next();
-                    System.out.println(eachCell.getValue());
+                    Row row = sheet.createRow(rowIndex++);
+                    row.createCell(1).setCellValue(eachRow.getKey());
+                    row.createCell(2).setCellValue(eachCell.getKey().toString());
+                    if (eachCell.getValue() == null) {
+                        row.createCell(3).setCellValue("");
+                    } else {
+                        row.createCell(3).setCellValue(eachCell.getValue().toString());
+                    }
                 }
             }
         }
+        FileOutputStream excelOut = new FileOutputStream(fileName);
+        wb.write(excelOut);
+        excelOut.close();
     }
 
-    public void createExcel(String fileName, String sheetName) throws IOException {
+    public void createExcelDataContact(String fileName, String sheetName) throws IOException {
         Workbook wb = new XSSFWorkbook();
         Sheet sheet = wb.createSheet(sheetName);
-        for (int i = 1; i < getTotalRows() ; i++) {
-            Row row = sheet.createRow(i);
-            for (Map.Entry<Integer, Map<String, Cell>> eachRow : getData().entrySet()) {
-                System.out.println(eachRow);
+
+        int index = 0;
+        for (Map.Entry<Integer, List<Cell>> eachRow : getContactData().entrySet()) {
+            Row row = sheet.createRow(index);
+            row.createCell(0).setCellValue(eachRow.getKey());
+            for (int i = 1; i < eachRow.getValue().size(); i++) {
+                if (eachRow.getValue().get(i) == null) {
+                    row.createCell(i).setCellValue("");
+                } else {
+                    row.createCell(i).setCellValue(eachRow.getValue().get(i).toString());
+                }
             }
+            index++;
         }
+
         FileOutputStream excelOut = new FileOutputStream(fileName);
         wb.write(excelOut);
         excelOut.close();
@@ -170,4 +203,5 @@ public class POI {
     public Map<Object, Object> mapValue() {
         return mapValue();
     }
+
 }
